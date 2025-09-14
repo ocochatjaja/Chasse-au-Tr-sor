@@ -91,12 +91,11 @@
             height: 24px;
             animation: spin 1s linear infinite;
         }
-
         .distance-bar-wrapper {
             position: relative;
             height: 8px;
             border-radius: 4px;
-            background-color: #bfdbfe;
+            background-color: #e5e7eb;
             margin-top: 0.5rem;
         }
         .distance-bar {
@@ -104,7 +103,7 @@
             border-radius: 4px;
             transition: width 0.5s ease-in-out, background-color 0.5s ease-in-out;
         }
-        .microphone-btn, .camera-btn {
+        .microphone-btn, .camera-btn, .mute-btn {
             background-color: #8b5cf6;
             color: white;
             font-weight: 600;
@@ -112,25 +111,22 @@
             border-radius: 9999px;
             transition: background-color 0.2s;
         }
-        .microphone-btn:hover, .camera-btn:hover {
+        .microphone-btn:hover, .camera-btn:hover, .mute-btn:hover {
             background-color: #7c3aed;
         }
-        .microphone-icon, .camera-icon {
+        .microphone-icon, .camera-icon, .speaker-icon {
             width: 24px;
             height: 24px;
         }
-        
         .game-title {
             font-size: 2rem;
             line-height: 2.25rem;
             margin-bottom: 1rem;
         }
-        
         .clue-text {
             font-size: 1.5rem;
             line-height: 2rem;
         }
-
         @media (min-width: 768px) {
             .game-title {
                 font-size: 3rem;
@@ -144,37 +140,31 @@
     </style>
 </head>
 <body>
-
     <div class="card">
         <h1 class="game-title font-bold text-blue-600 flex items-center justify-center space-x-2">
             <span>💙⭐ Chasse au Trésor de Stitch ⭐💙</span>
         </h1>
         <p class="text-gray-500 mb-8">Pour Nelia, Mia, Élya, Assia, Diana et Cléa !</p>
-
         <div id="game-container" class="flex-grow flex flex-col justify-center">
             <!-- État initial -->
             <div id="start-screen" class="space-y-6 hidden">
                 <p class="text-gray-700">Prêtes pour une aventure ? Appuyez sur le bouton pour commencer la chasse au trésor !</p>
                 <button id="start-btn" class="btn-primary">Commencer l'aventure</button>
             </div>
-
             <!-- État du jeu -->
             <div id="game-screen" class="hidden space-y-6">
                 <div class="space-y-2">
                     <p class="text-gray-600">Indice n°<span id="clue-number">1</span></p>
                     <p id="clue-text" class="clue-text font-semibold text-gray-800"></p>
                 </div>
-                
                 <div id="distance-info" class="hidden mt-4">
                     <p id="distance-status" class="text-sm font-semibold mb-2"></p>
                     <div class="distance-bar-wrapper">
                         <div id="distance-bar" class="distance-bar"></div>
                     </div>
                 </div>
-
                 <div class="space-y-4">
                     <p class="text-xs text-gray-400">🚨 Attention : Ceci est une aide d'urgence 🚨</p>
-                    <button id="help-btn" class="btn-secondary w-full">✨ Demander de l'aide à Stitch ✨</button>
                     <div class="flex space-x-2">
                         <button id="voice-help-btn" class="microphone-btn flex-1 flex justify-center items-center space-x-2">
                             <svg class="microphone-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
@@ -189,15 +179,21 @@
                             <span>Photo à Stitch</span>
                         </button>
                     </div>
+                    <div class="flex space-x-2 mt-2">
+                        <button id="help-btn" class="btn-secondary flex-1">✨ Indice de Stitch ✨</button>
+                        <button id="mute-btn" class="mute-btn flex-shrink-0 w-16 flex justify-center items-center">
+                            <svg id="speaker-icon" class="speaker-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                            </svg>
+                        </button>
+                    </div>
                     <div id="help-loading" class="hidden flex justify-center items-center py-2"><div class="spinner"></div></div>
                     <div id="message-area" class="message hidden"></div>
                     <input type="file" id="image-upload" accept="image/*" class="hidden">
                     <input type="text" id="code-input" placeholder="Entrer le code secret..." class="w-full p-3 rounded-lg border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-center uppercase" maxlength="10">
                 </div>
-
                 <button id="check-code-btn" class="btn-primary w-full">Vérifier le code</button>
             </div>
-
             <!-- État de fin -->
             <div id="end-screen" class="hidden space-y-6">
                 <p class="text-3xl font-bold text-blue-600">Félicitations, vous avez trouvé tous les indices ! 💙</p>
@@ -208,7 +204,6 @@
             </div>
         </div>
     </div>
-
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -224,7 +219,6 @@
         const TTS_API_KEY = "";
         const TTS_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=" + TTS_API_KEY;
         const TEXT_GENERATION_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=" + TTS_API_KEY;
-
         // Éléments DOM
         const startScreen = document.getElementById('start-screen');
         const gameScreen = document.getElementById('game-screen');
@@ -244,7 +238,8 @@
         const cameraBtn = document.getElementById('camera-btn');
         const imageUpload = document.getElementById('image-upload');
         const helpLoading = document.getElementById('help-loading');
-
+        const muteBtn = document.getElementById('mute-btn');
+        const speakerIcon = document.getElementById('speaker-icon');
         // Variables de logique du jeu
         let clues = [
             { clueText: "Tu dois trouver une grande voiture jaune et rouge qui se trouve devant la maison.", code: "VROUM", location: { latitude: 48.89579205762584, longitude: 2.6194254670466077 } },
@@ -261,12 +256,13 @@
         let currentClueIndex = 0;
         let geolocationInterval;
         let soundSynth;
+        let isMuted = false;
         let isGeolocationDenied = false;
-
+        let lastPingDistance = Infinity;
         const TREASURE_HUNT_DOC_ID = 'the_one_and_only_hunt';
-        const PING_DISTANCE = 50;
+        const PING_DISTANCE_THRESHOLD = 50;
+        const PING_DISTANCE_PROXIMITY = 20;
         const MAX_TRACKING_DISTANCE = 200;
-
         // Initialisation de Firebase
         async function initializeFirebase() {
             try {
@@ -298,13 +294,11 @@
                 startScreen.classList.remove('hidden');
             }
         }
-
         // Chargement des données de la chasse au trésor depuis Firestore
         async function loadTreasureHunt() {
             try {
                 const docRef = doc(db, `artifacts/${appId}/public/data/treasureHunt`, TREASURE_HUNT_DOC_ID);
                 const docSnap = await getDoc(docRef);
-
                 if (docSnap.exists()) {
                     clues = docSnap.data().clues;
                     startScreen.classList.remove('hidden');
@@ -317,14 +311,13 @@
                 showMessage("Erreur de connexion aux services de l'application.", true);
             }
         }
-
         function showMessage(text, isError = false) {
             messageArea.textContent = text;
             messageArea.classList.remove('hidden', 'success', 'error');
             messageArea.classList.add(isError ? 'error' : 'success');
             setTimeout(() => {
                 messageArea.classList.add('hidden');
-            }, 3000);
+            }, 5000);
         }
         
         function getDistance(lat1, lon1, lat2, lon2) {
@@ -339,10 +332,14 @@
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
             return R * c;
         }
-
         function playPingSound() {
+            if (isMuted) return;
             if (!soundSynth) {
-                soundSynth = new Tone.Synth().toDestination();
+                soundSynth = new Tone.Synth({
+                    oscillator: { type: "sine" },
+                    envelope: { attack: 0.01, decay: 0.2, sustain: 0, release: 0.2 },
+                    volume: -15
+                }).toDestination();
             }
             soundSynth.triggerAttackRelease("C4", "8n");
         }
@@ -356,30 +353,25 @@
             }
             return bytes.buffer;
         }
-
         function pcmToWav(pcmData, sampleRate) {
             const pcm16 = new Int16Array(pcmData);
             const buffer = new ArrayBuffer(44 + pcm16.length * 2);
             const view = new DataView(buffer);
             let offset = 0;
-
             function writeString(str) {
                 for (let i = 0; i < str.length; i++) {
                     view.setUint8(offset + i, str.charCodeAt(i));
                 }
                 offset += str.length;
             }
-
             function writeUint32(val) {
                 view.setUint32(offset, val, true);
                 offset += 4;
             }
-
             function writeUint16(val) {
                 view.setUint16(offset, val, true);
                 offset += 2;
             }
-
             writeString('RIFF');
             writeUint32(36 + pcm16.length * 2);
             writeString('WAVE');
@@ -399,21 +391,17 @@
             }
             return new Blob([view], { type: 'audio/wav' });
         }
-
         // Assistant vocal utilisant Gemini API
         async function provideHint(userQuery = "") {
             if (currentClueIndex >= clues.length) return;
             helpBtn.disabled = true;
             voiceHelpBtn.disabled = true;
             helpLoading.classList.remove('hidden');
-
             const currentClue = clues[currentClueIndex];
             let prompt = `Tu es un compagnon de chasse au trésor nommé Stitch. Ton but est d'aider les petites filles à trouver le code secret. Sois très amical, joyeux et encourageant. Utilise un langage simple, pas comme un robot. Ton indice doit se concentrer sur le lieu actuel. Le lieu est le suivant : "${currentClue.clueText}". Ton indice doit être court et doit commencer par une phrase amusante et encourageante de Stitch comme "Aloha ! Ne t'inquiète pas, Stitch est là pour aider !".`;
-            
             if (userQuery) {
                 prompt += ` La personne te demande de l'aide en disant : "${userQuery}". Intègre sa phrase dans ta réponse si tu le peux.`;
             }
-
             try {
                 const textPayload = {
                     contents: [{ parts: [{ text: prompt }] }],
@@ -421,24 +409,19 @@
                         parts: [{ text: `You are Stitch, a joyful and mischievous treasure hunt guide. Your hints should be short, simple, and full of encouragement. Do not sound like a robot.` }]
                     }
                 };
-
                 const textResponse = await fetch(TEXT_GENERATION_API_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(textPayload)
                 });
-
                 if (!textResponse.ok) {
                     throw new Error(`Erreur HTTP lors de la génération de texte: ${textResponse.status}`);
                 }
-
                 const textResult = await textResponse.json();
                 const hintText = textResult.candidates?.[0]?.content?.parts?.[0]?.text;
-
                 if (!hintText) {
                     throw new Error("Impossible de générer un indice textuel.");
                 }
-
                 const audioPayload = {
                     contents: [{ parts: [{ text: hintText }] }],
                     generationConfig: {
@@ -447,22 +430,18 @@
                     },
                     model: "gemini-2.5-flash-preview-tts"
                 };
-                
                 const audioResponse = await fetch(TTS_API_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(audioPayload)
                 });
-                
                 if (!audioResponse.ok) {
                     throw new Error(`Erreur HTTP lors de la génération d'audio: ${audioResponse.status}`);
                 }
-
                 const audioResult = await audioResponse.json();
                 const audioPart = audioResult.candidates?.[0]?.content?.parts?.[0];
                 const base64Audio = audioPart?.inlineData?.data;
                 const mimeType = audioPart?.inlineData?.mimeType;
-
                 if (base64Audio && mimeType) {
                     const sampleRate = parseInt(mimeType.match(/rate=(\d+)/)[1], 10);
                     const pcmData = base64ToArrayBuffer(base64Audio);
@@ -482,16 +461,13 @@
                 helpLoading.classList.add('hidden');
             }
         }
-
         // Assistant visuel utilisant l'API Gemini Vision
         async function provideVisualHint(base64Image) {
             if (currentClueIndex >= clues.length) return;
             cameraBtn.disabled = true;
             helpLoading.classList.remove('hidden');
-
             const currentClue = clues[currentClueIndex];
             const prompt = `Tu es un compagnon de chasse au trésor nommé Stitch. Le prochain indice est de trouver "${currentClue.clueText}". Analyse l'image fournie et dis-moi si l'endroit correspond à l'indice. Sois très amical, joyeux et encourageant. Utilise un langage simple. Si l'endroit correspond, dis "Bravo ! C'est le bon endroit !". Sinon, dis "Aloha ! Ce n'est pas le bon endroit, mais ne t'inquiète pas, Stitch a confiance en toi !".`;
-
             try {
                 const payload = {
                     contents: [{
@@ -507,7 +483,6 @@
                         ]
                     }],
                 };
-
                 const response = await fetch(TEXT_GENERATION_API_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -519,13 +494,11 @@
                 }
                 const result = await response.json();
                 const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text;
-
                 if (responseText) {
                     showMessage(responseText, false);
                 } else {
                     throw new Error("Impossible de générer une réponse visuelle.");
                 }
-
             } catch (error) {
                 console.error("Erreur de l'assistant visuel:", error);
                 showMessage("L'assistant visuel n'a pas pu analyser l'image. Réessayez !", true);
@@ -534,31 +507,24 @@
                 helpLoading.classList.add('hidden');
             }
         }
-
-
         // Reconnaissance vocale
         function startVoiceRecognition() {
             if (!('webkitSpeechRecognition' in window)) {
                 showMessage("La reconnaissance vocale n'est pas supportée par ce navigateur.", true);
                 return;
             }
-
             const recognition = new webkitSpeechRecognition();
             recognition.lang = 'fr-FR';
             recognition.interimResults = false;
             recognition.maxAlternatives = 1;
-
             voiceHelpBtn.disabled = true;
             voiceHelpBtn.textContent = 'Écoute...';
-
             recognition.start();
-
             recognition.onresult = (event) => {
                 const transcript = event.results[0][0].transcript;
                 showMessage(`Tu as dit : "${transcript}".`);
                 provideHint(transcript);
             };
-
             recognition.onerror = (event) => {
                 console.error("Erreur de reconnaissance vocale:", event.error);
                 let errorMessage = "Erreur de reconnaissance vocale.";
@@ -569,7 +535,6 @@
                 voiceHelpBtn.disabled = false;
                 voiceHelpBtn.textContent = 'Parler avec Stitch';
             };
-
             recognition.onend = () => {
                 voiceHelpBtn.disabled = false;
                 voiceHelpBtn.textContent = 'Parler avec Stitch';
@@ -581,45 +546,39 @@
                 clearInterval(geolocationInterval);
                 return;
             }
-
             const nextLocation = clues[currentClueIndex].location;
             if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition((position) => {
                     const userLat = position.coords.latitude;
                     const userLon = position.coords.longitude;
                     const distance = getDistance(userLat, userLon, nextLocation.latitude, nextLocation.longitude);
-                    
                     distanceInfoDiv.classList.remove('hidden');
-
                     const progress = Math.min(100, Math.max(0, 100 - (distance / MAX_TRACKING_DISTANCE) * 100));
                     distanceBar.style.width = `${progress}%`;
-
                     let barColor;
                     let statusText;
-                    if (distance > 100) {
-                        barColor = 'bg-blue-500';
-                        statusText = 'Loin...';
-                    } else if (distance > 30) {
-                        barColor = 'bg-yellow-400';
-                        statusText = 'Proche !';
-                    } else {
+                    if (distance > PING_DISTANCE_THRESHOLD) {
                         barColor = 'bg-red-500';
+                        statusText = 'Loin...';
+                    } else if (distance > PING_DISTANCE_PROXIMITY) {
+                        barColor = 'bg-green-500';
+                        statusText = 'Proche !';
+                        if (lastPingDistance > PING_DISTANCE_THRESHOLD) {
+                            playPingSound();
+                        }
+                    } else {
+                        barColor = 'bg-lime-400';
                         statusText = 'Très Proche !';
                         playPingSound();
                     }
+                    lastPingDistance = distance;
                     distanceBar.className = `distance-bar ${barColor}`;
                     distanceStatus.textContent = statusText;
-
-                    if (distance < PING_DISTANCE) {
-                        playPingSound();
-                        showMessage(`"Bip bip !" Tu es très proche de l'indice n°${currentClueIndex + 1} !`);
-                    }
                 }, (error) => {
                     console.error("Erreur de géolocalisation:", {
                         code: error.code,
                         message: error.message
                     });
-                    
                     let errorMessage = "Impossible de trouver ta position. Le GPS est-il activé ?";
                     if (error.code === error.PERMISSION_DENIED) {
                          errorMessage = "L'accès à la position a été refusé. Il faut l'activer pour la chasse au trésor.";
@@ -635,7 +594,6 @@
                 showMessage("La géolocalisation n'est pas supportée par ce navigateur.", true);
             }
         }
-
         function updateGameUI() {
             if (currentClueIndex >= clues.length) {
                 gameScreen.classList.add('hidden');
@@ -643,18 +601,16 @@
                 clearInterval(geolocationInterval);
                 return;
             }
-
             const currentClue = clues[currentClueIndex];
             clueNumberSpan.textContent = currentClueIndex + 1;
             clueTextP.textContent = currentClue.clueText;
             codeInput.value = '';
             distanceInfoDiv.classList.add('hidden');
+            lastPingDistance = Infinity; // Reset last ping distance for new clue
         }
-
         checkCodeBtn.addEventListener('click', () => {
             const enteredCode = codeInput.value.trim().toUpperCase();
             const correctCode = clues[currentClueIndex].code.toUpperCase();
-            
             if (enteredCode === correctCode) {
                 currentClueIndex++;
                 showMessage("Code correct ! L'indice suivant est affiché.");
@@ -663,31 +619,26 @@
                 showMessage("Code incorrect. Essaie encore !", true);
             }
         });
-
         startBtn.addEventListener('click', () => {
             startScreen.classList.add('hidden');
             gameScreen.classList.remove('hidden');
             updateGameUI();
             geolocationInterval = setInterval(checkGeolocation, 1000);
         });
-
         restartBtn.addEventListener('click', () => {
             currentClueIndex = 0;
             endScreen.classList.add('hidden');
             startScreen.classList.remove('hidden');
         });
-
         helpBtn.addEventListener('click', () => provideHint());
         voiceHelpBtn.addEventListener('click', startVoiceRecognition);
         
         cameraBtn.addEventListener('click', () => {
             imageUpload.click();
         });
-
         imageUpload.addEventListener('change', (event) => {
             const file = event.target.files[0];
             if (!file) return;
-
             const reader = new FileReader();
             reader.onload = function(e) {
                 const base64String = e.target.result.split(',')[1];
@@ -695,7 +646,14 @@
             };
             reader.readAsDataURL(file);
         });
-
+        muteBtn.addEventListener('click', () => {
+            isMuted = !isMuted;
+            if (isMuted) {
+                speakerIcon.innerHTML = `<path d="M16.5 12c0 1.77-1.02 3.29-2.5 4.03v-8.05c1.48.73 2.5 2.25 2.5 4.02zM19 12c0 2.97-2.16 5.43-5 5.91v-1.12c2.15-.5 3.5-2.52 3.5-4.79s-1.35-4.29-3.5-4.79V6.09c2.84.48 5 2.94 5 5.91zM3 9v6h4l5 5V4L7 9H3zm9-6.91v2.06c4.01.91 7 4.49 7 8.77s-2.99 7.86-7 8.77v2.06c5.19-1.22 9-6.08 9-10.83s-3.81-9.61-9-10.83z"/>`;
+            } else {
+                speakerIcon.innerHTML = `<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>`;
+            }
+        });
         initializeFirebase();
     </script>
 </body>
