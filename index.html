@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chasse au Trésor Stitch</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #e0f2fe;
+            background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cpattern id='pattern-stars' width='10' height='10' patternUnits='userSpaceOnUse'%3E%3Cpath d='M5 0.5 L6.18 3.82 L9.75 4.12 L7.07 6.68 L7.94 10.18 L5 8.18 L2.06 10.18 L2.93 6.68 L0.25 4.12 L3.82 3.82 Z' fill='%2393c5fd' /%3E%3C/pattern%3E%3C/defs%3E%3Crect x='0' y='0' width='100%25' height='100%25' fill='url(%23pattern-stars)' /%3E%3C/svg%3E");
+            background-size: 50px;
+            background-repeat: repeat;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 1rem;
+        }
+        .card {
+            background-color: white;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+            padding: 2.5rem;
+            text-align: center;
+            position: relative;
+            width: 98vw;
+            height: 98vh;
+            max-width: none;
+            max-height: none;
+            overflow: auto;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        @media (min-width: 768px) {
+            .card {
+                max-width: 900px;
+                max-height: 950px;
+                width: auto;
+                height: auto;
+            }
+        }
+        .btn-primary {
+            background-color: #2563eb;
+            color: white;
+            font-weight: 600;
+            padding: 0.75rem 1.5rem;
+            border-radius: 9999px;
+            transition: background-color 0.2s;
+        }
+        .btn-primary:hover {
+            background-color: #1e40af;
+        }
+        .btn-secondary {
+            background-color: #e0f2fe;
+            color: #2563eb;
+            font-weight: 600;
+            padding: 0.75rem 1.5rem;
+            border-radius: 9999px;
+            transition: background-color 0.2s;
+        }
+        .btn-secondary:hover {
+            background-color: #bfdbfe;
+        }
+        .message {
+            margin-top: 1rem;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+        }
+        .message.success {
+            background-color: #c0f4d3;
+            color: #166534;
+        }
+        .message.error {
+            background-color: #fecaca;
+            color: #991b1b;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-top: 4px solid #2563eb;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        .distance-bar-wrapper {
+            position: relative;
+            height: 8px;
+            border-radius: 4px;
+            background-color: #e5e7eb;
+            margin-top: 0.5rem;
+        }
+        .distance-bar {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s ease-in-out, background-color 0.5s ease-in-out;
+        }
+        .microphone-btn, .camera-btn, .mute-btn {
+            background-color: #8b5cf6;
+            color: white;
+            font-weight: 600;
+            padding: 0.75rem 1.5rem;
+            border-radius: 9999px;
+            transition: background-color 0.2s;
+        }
+        .microphone-btn:hover, .camera-btn:hover, .mute-btn:hover {
+            background-color: #7c3aed;
+        }
+        .microphone-icon, .camera-icon, .speaker-icon {
+            width: 24px;
+            height: 24px;
+        }
+        .game-title {
+            font-size: 2rem;
+            line-height: 2.25rem;
+            margin-bottom: 1rem;
+        }
+        .clue-text {
+            font-size: 1.5rem;
+            line-height: 2rem;
+        }
+        @media (min-width: 768px) {
+            .game-title {
+                font-size: 3rem;
+                line-height: 3.5rem;
+            }
+            .clue-text {
+                font-size: 1.25rem;
+                line-height: 1.75rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1 class="game-title font-bold text-blue-600 flex items-center justify-center space-x-2">
+            <span>💙⭐ Chasse au Trésor de Stitch ⭐💙</span>
+        </h1>
+        <p class="text-gray-500 mb-8">Pour Nelia, Mia, Élya, Assia, Diana et Cléa !</p>
+        <div id="game-container" class="flex-grow flex flex-col justify-center">
+            <!-- État initial -->
+            <div id="start-screen" class="space-y-6 hidden">
+                <p class="text-gray-700">Prêtes pour une aventure ? Appuyez sur le bouton pour commencer la chasse au trésor !</p>
+                <button id="start-btn" class="btn-primary">Commencer l'aventure</button>
+            </div>
+            <!-- État du jeu -->
+            <div id="game-screen" class="hidden space-y-6">
+                <div class="space-y-2">
+                    <p class="text-gray-600">Indice n°<span id="clue-number">1</span></p>
+                    <p id="clue-text" class="clue-text font-semibold text-gray-800"></p>
+                </div>
+                <div id="distance-info" class="hidden mt-4">
+                    <p id="distance-status" class="text-sm font-semibold mb-2"></p>
+                    <div class="distance-bar-wrapper">
+                        <div id="distance-bar" class="distance-bar"></div>
+                    </div>
+                </div>
+                <div class="space-y-4">
+                    <p class="text-xs text-gray-400">🚨 Attention : Ceci est une aide d'urgence 🚨</p>
+                    <div class="flex space-x-2">
+                        <button id="voice-help-btn" class="microphone-btn flex-1 flex justify-center items-center space-x-2">
+                            <svg class="microphone-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.5-3c0 3.53-2.73 6.43-6 6.92V21h-1v-4.08c-3.27-.49-6-3.39-6-6.92h-1c0 4.09 3.65 7.44 8 8V23h2v-2.08c4.35-.56 8-3.91 8-8h-1z"/>
+                            </svg>
+                            <span>Parler avec Stitch</span>
+                        </button>
+                        <button id="camera-btn" class="camera-btn flex-1 flex justify-center items-center space-x-2">
+                            <svg class="camera-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M14.12 4L12.92 2.8C12.59 2.38 12.05 2 11.45 2H8.55C7.95 2 7.41 2.38 7.08 2.8L5.88 4H4C2.9 4 2 4.9 2 6v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.88zM12 18c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/>
+                            </svg>
+                            <span>Photo à Stitch</span>
+                        </button>
+                    </div>
+                    <div class="flex space-x-2 mt-2">
+                        <button id="help-btn" class="btn-secondary flex-1">✨ Indice de Stitch ✨</button>
+                        <button id="mute-btn" class="mute-btn flex-shrink-0 w-16 flex justify-center items-center">
+                            <svg id="speaker-icon" class="speaker-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div id="help-loading" class="hidden flex justify-center items-center py-2"><div class="spinner"></div></div>
+                    <div id="message-area" class="message hidden"></div>
+                    <input type="text" id="code-input" placeholder="Entrer le code secret..." class="w-full p-3 rounded-lg border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-center uppercase" maxlength="10">
+                </div>
+                <button id="check-code-btn" class="btn-primary w-full">Vérifier le code</button>
+            </div>
+            <!-- État de fin -->
+            <div id="end-screen" class="hidden space-y-6">
+                <p class="text-3xl font-bold text-blue-600">Félicitations, vous avez trouvé tous les indices ! 💙</p>
+                <p class="text-gray-700">Le trésor vous attend ! 
+                    <br>
+                    S'il ne pleut pas, il est sous l'arbre au centre du jardin, et vous y trouverez une pinata que pour vous et spécialement pour Nélia. C'est stitchement Stitch !</p>
+                <button id="restart-btn" class="btn-secondary">Recommencer</button>
+            </div>
+        </div>
+    </div>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        // Firebase global variables
+        let app, db, auth, currentUserId;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        // Éléments DOM
+        const startScreen = document.getElementById('start-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const endScreen = document.getElementById('end-screen');
+        const startBtn = document.getElementById('start-btn');
+        const clueNumberSpan = document.getElementById('clue-number');
+        const clueTextP = document.getElementById('clue-text');
+        const codeInput = document.getElementById('code-input');
+        const checkCodeBtn = document.getElementById('check-code-btn');
+        const messageArea = document.getElementById('message-area');
+        const distanceInfoDiv = document.getElementById('distance-info');
+        const distanceBar = document.getElementById('distance-bar');
+        const distanceStatus = document.getElementById('distance-status');
+        const restartBtn = document.getElementById('restart-btn');
+        const helpBtn = document.getElementById('help-btn');
+        const voiceHelpBtn = document.getElementById('voice-help-btn');
+        const cameraBtn = document.getElementById('camera-btn');
+        const helpLoading = document.getElementById('help-loading');
+        const muteBtn = document.getElementById('mute-btn');
+        const speakerIcon = document.getElementById('speaker-icon');
+        // Variables de logique du jeu
+        let clues = [
+            { clueText: "Tu dois trouver une grande voiture jaune et rouge qui se trouve devant la maison.", code: "VROUM", location: { latitude: 48.89579205762584, longitude: 2.6194254670466077 } },
+            { clueText: "Va saluer les reines du jardin, là où elles dorment. Le code est près de leur petit nid.", code: "POULE", location: { latitude: 48.89590106803416, longitude: 2.6191110416982397 } },
+            { clueText: "Cherche un endroit où tu pourras trouver de la menthe fraîche et coupée. Le code est sous les feuilles les plus grandes.", code: "MENTHE", location: { latitude: 48.89588006864819, longitude: 2.619296428687051 } },
+            { clueText: "Au centre de la pelouse, un grand arbre se dresse fièrement. Son secret est enraciné au pied de l'arbre.", code: "ARBRE", location: { latitude: 48.89594353751988, longitude: 2.619096801487914 } },
+            { clueText: "Va du côté de l'entrée principale de ta maison et tu trouveras sur le chemin des plantes un indice caché.", code: "MUR", location: { latitude: 48.89584631056256, longitude: 2.6194910227883232 } },
+            { clueText: "Cherche le fruit doux et juteux. Sous le poirier, un autre secret te sera révélé.", code: "JUTE", location: { latitude: 48.89585329381074, longitude: 2.6192461338258406 } },
+            { clueText: "Va sous les escaliers de la véranda pour trouver un autre code secret.", code: "ESCALIER", location: { latitude: 48.89588275800879, longitude: 2.61938887898829 } },
+            { clueText: "Va près de la belle fleur de la passion. Son mystère t'y attend, caché sous une feuille.", code: "FLEUR", location: { latitude: 48.89589781873327, longitude: 2.6190650847281516 } },
+            { clueText: "Le prochain indice t'attend dans les volets de la dépendance, au fond du jardin.", code: "MAISON", location: { latitude: 48.895981726378416, longitude: 2.619068984583117 } },
+            { clueText: "Tu as traversé la maison et le grand jardin. Cherche le trésor final près de la porte de derrière.", code: "TRÉSOR", location: { latitude: 48.895875406065045, longitude: 2.6194038510005475 } },
+        ];
+        const STITCH_HINTS = [
+            "Aloha ! Ne t'inquiète pas, Stitch est là pour aider ! Le trésor est proche, tu peux le sentir ?",
+            "Ohana ! Stitch est là. Regarde bien autour de toi, peut-être que le code est sur quelque chose de brillant ?",
+            "Hihi ! Stitch a faim ! Essaie de chercher près d'une chose qui se mange, comme les lémuriens !",
+            "Aaaaah ! Stitch a peur du noir ! Peut-être que le code est caché sous quelque chose qui a de l'ombre ?",
+            "Stitch est le meilleur ami de Lilo ! Le code pourrait être près de l'endroit où tu aimes le plus jouer !",
+            "Lilo m'a dit de ne pas toucher à ce qui est rouge ! Le code est peut-être près d'une chose qui n'est pas rouge ?",
+        ];
+        const IMAGE_HINTS = [
+            "Aloha ! Stitch voit quelque chose sur ta photo ! Regarde près de la chose la plus grande, c'est là que le code est caché.",
+            "Ohana ! Belle photo ! Stitch pense que le code est près de la chose la plus brillante. Cherche encore !",
+            "Wow, Stitch adore ce que tu as pris en photo ! Le code est probablement près d'une plante. Cherche bien !",
+            "Hmmm... Stitch n'est pas sûr que ce soit le bon endroit. Réessaie dans une autre pièce !",
+        ];
+        let currentClueIndex = 0;
+        let geolocationInterval;
+        let soundSynth;
+        let isMuted = false;
+        let isGeolocationDenied = false;
+        let lastPingDistance = Infinity;
+        const TREASURE_HUNT_DOC_ID = 'the_one_and_only_hunt';
+        const PING_DISTANCE_THRESHOLD = 50;
+        const PING_DISTANCE_PROXIMITY = 20;
+        const MAX_TRACKING_DISTANCE = 200;
+        
+        function showMessage(text, isError = false) {
+            messageArea.textContent = text;
+            messageArea.classList.remove('hidden', 'success', 'error');
+            messageArea.classList.add(isError ? 'error' : 'success');
+            setTimeout(() => {
+                messageArea.classList.add('hidden');
+            }, 5000);
+        }
+        
+        function getDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371e3;
+            const φ1 = lat1 * Math.PI/180;
+            const φ2 = lat2 * Math.PI/180;
+            const Δφ = (lat2-lat1) * Math.PI/180;
+            const Δλ = (lon2-lon1) * Math.PI/180;
+            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                      Math.cos(φ1) * Math.cos(φ2) *
+                      Math.sin(Δλ/2) * Math.sin(Δλ/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+        function playPingSound() {
+            if (isMuted) return;
+            if (!soundSynth) {
+                soundSynth = new Tone.Synth({
+                    oscillator: { type: "sine" },
+                    envelope: { attack: 0.01, decay: 0.2, sustain: 0, release: 0.2 },
+                    volume: -15
+                }).toDestination();
+            }
+            soundSynth.triggerAttackRelease("C4", "8n");
+        }
+        
+        // Simule un assistant vocal sans API
+        function provideHint() {
+            if (currentClueIndex >= clues.length) return;
+            helpBtn.disabled = true;
+            voiceHelpBtn.disabled = true;
+            helpLoading.classList.remove('hidden');
+            const hintText = STITCH_HINTS[Math.floor(Math.random() * STITCH_HINTS.length)];
+            
+            setTimeout(() => {
+                showMessage(hintText);
+                playPingSound();
+                helpBtn.disabled = false;
+                voiceHelpBtn.disabled = false;
+                helpLoading.classList.add('hidden');
+            }, 1500); // Simuler un temps de réponse
+        }
+        
+        // Simule un assistant image sans API
+        function provideVisualHint() {
+            if (currentClueIndex >= clues.length) return;
+            cameraBtn.disabled = true;
+            helpLoading.classList.remove('hidden');
+            const hintText = IMAGE_HINTS[Math.floor(Math.random() * IMAGE_HINTS.length)];
+
+            setTimeout(() => {
+                showMessage(hintText);
+                cameraBtn.disabled = false;
+                helpLoading.classList.add('hidden');
+            }, 1500);
+        }
+        
+        function checkGeolocation() {
+            if (currentClueIndex >= clues.length || isGeolocationDenied) {
+                clearInterval(geolocationInterval);
+                return;
+            }
+            const nextLocation = clues[currentClueIndex].location;
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition((position) => {
+                    const userLat = position.coords.latitude;
+                    const userLon = position.coords.longitude;
+                    const distance = getDistance(userLat, userLon, nextLocation.latitude, nextLocation.longitude);
+                    distanceInfoDiv.classList.remove('hidden');
+                    const progress = Math.min(100, Math.max(0, 100 - (distance / MAX_TRACKING_DISTANCE) * 100));
+                    distanceBar.style.width = `${progress}%`;
+                    let barColor;
+                    let statusText;
+                    if (distance > PING_DISTANCE_THRESHOLD) {
+                        barColor = 'bg-red-500';
+                        statusText = 'Loin...';
+                    } else if (distance > PING_DISTANCE_PROXIMITY) {
+                        barColor = 'bg-green-500';
+                        statusText = 'Proche !';
+                        if (lastPingDistance > PING_DISTANCE_THRESHOLD) {
+                            playPingSound();
+                        }
+                    } else {
+                        barColor = 'bg-lime-400';
+                        statusText = 'Très Proche !';
+                        playPingSound();
+                    }
+                    lastPingDistance = distance;
+                    distanceBar.className = `distance-bar ${barColor}`;
+                    distanceStatus.textContent = statusText;
+                }, (error) => {
+                    console.error("Erreur de géolocalisation:", {
+                        code: error.code,
+                        message: error.message
+                    });
+                    let errorMessage = "Impossible de trouver ta position. Le GPS est-il activé ?";
+                    if (error.code === error.PERMISSION_DENIED) {
+                         errorMessage = "L'accès à la position a été refusé. Il faut l'activer pour la chasse au trésor.";
+                         isGeolocationDenied = true;
+                    } else if (error.code === error.POSITION_UNAVAILABLE) {
+                         errorMessage = "La position n'est pas disponible.";
+                    } else if (error.code === error.TIMEOUT) {
+                         errorMessage = "La demande de position a expiré.";
+                    }
+                    showMessage(errorMessage + " (Cela fonctionnera une fois publié sur un site sécurisé.)", true);
+                });
+            } else {
+                showMessage("La géolocalisation n'est pas supportée par ce navigateur.", true);
+            }
+        }
+        function updateGameUI() {
+            if (currentClueIndex >= clues.length) {
+                gameScreen.classList.add('hidden');
+                endScreen.classList.remove('hidden');
+                clearInterval(geolocationInterval);
+                return;
+            }
+            const currentClue = clues[currentClueIndex];
+            clueNumberSpan.textContent = currentClueIndex + 1;
+            clueTextP.textContent = currentClue.clueText;
+            codeInput.value = '';
+            distanceInfoDiv.classList.add('hidden');
+            lastPingDistance = Infinity; // Reset last ping distance for new clue
+        }
+        checkCodeBtn.addEventListener('click', () => {
+            const enteredCode = codeInput.value.trim().toUpperCase();
+            const correctCode = clues[currentClueIndex].code.toUpperCase();
+            if (enteredCode === correctCode) {
+                currentClueIndex++;
+                showMessage("Code correct ! L'indice suivant est affiché.");
+                updateGameUI();
+            } else {
+                showMessage("Code incorrect. Essaie encore !", true);
+            }
+        });
+        startBtn.addEventListener('click', () => {
+            startScreen.classList.add('hidden');
+            gameScreen.classList.remove('hidden');
+            updateGameUI();
+            geolocationInterval = setInterval(checkGeolocation, 1000);
+        });
+        restartBtn.addEventListener('click', () => {
+            currentClueIndex = 0;
+            endScreen.classList.add('hidden');
+            startScreen.classList.remove('hidden');
+        });
+        helpBtn.addEventListener('click', () => provideHint());
+        voiceHelpBtn.addEventListener('click', () => provideHint());
+        cameraBtn.addEventListener('click', () => provideVisualHint());
+        
+        muteBtn.addEventListener('click', () => {
+            isMuted = !isMuted;
+            if (isMuted) {
+                speakerIcon.innerHTML = `<path d="M16.5 12c0 1.77-1.02 3.29-2.5 4.03v-8.05c1.48.73 2.5 2.25 2.5 4.02zM19 12c0 2.97-2.16 5.43-5 5.91v-1.12c2.15-.5 3.5-2.52 3.5-4.79s-1.35-4.29-3.5-4.79V6.09c2.84.48 5 2.94 5 5.91zM3 9v6h4l5 5V4L7 9H3zm9-6.91v2.06c4.01.91 7 4.49 7 8.77s-2.99 7.86-7 8.77v2.06c5.19-1.22 9-6.08 9-10.83s-3.81-9.61-9-10.83z"/>`;
+            } else {
+                speakerIcon.innerHTML = `<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>`;
+            }
+        });
+        // Initialisation de Firebase
+        async function initializeFirebase() {
+            try {
+                if (Object.keys(firebaseConfig).length > 0) {
+                    app = initializeApp(firebaseConfig);
+                    db = getFirestore(app);
+                    auth = getAuth(app);
+                    
+                    onAuthStateChanged(auth, async (user) => {
+                        if (user) {
+                            currentUserId = user.uid;
+                            await loadTreasureHunt();
+                        } else {
+                            console.log("Utilisateur non authentifié, tentative de connexion anonyme ou avec jeton.");
+                            if (initialAuthToken) {
+                                await signInWithCustomToken(auth, initialAuthToken);
+                            } else {
+                                await signInAnonymously(auth);
+                            }
+                        }
+                    });
+                } else {
+                    console.error("Configuration Firebase manquante. Chargement des indices par défaut.");
+                    startScreen.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error("Erreur d'initialisation de Firebase:", error);
+                showMessage("Erreur de connexion aux services de l'application.", true);
+                startScreen.classList.remove('hidden');
+            }
+        }
+        // Chargement des données de la chasse au trésor depuis Firestore
+        async function loadTreasureHunt() {
+            try {
+                const docRef = doc(db, `artifacts/${appId}/public/data/treasureHunt`, TREASURE_HUNT_DOC_ID);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    clues = docSnap.data().clues;
+                    startScreen.classList.remove('hidden');
+                } else {
+                    await setDoc(docRef, { clues: clues });
+                    startScreen.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error("Erreur de chargement de la chasse au trésor:", error);
+                showMessage("Erreur de connexion aux services de l'application.", true);
+            }
+        }
+        initializeFirebase();
+    </script>
+</body>
+</html>
