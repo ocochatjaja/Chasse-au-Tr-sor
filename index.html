@@ -263,54 +263,7 @@
         const PING_DISTANCE_THRESHOLD = 50;
         const PING_DISTANCE_PROXIMITY = 20;
         const MAX_TRACKING_DISTANCE = 200;
-        // Initialisation de Firebase
-        async function initializeFirebase() {
-            try {
-                if (Object.keys(firebaseConfig).length > 0) {
-                    app = initializeApp(firebaseConfig);
-                    db = getFirestore(app);
-                    auth = getAuth(app);
-                    
-                    onAuthStateChanged(auth, async (user) => {
-                        if (user) {
-                            currentUserId = user.uid;
-                            await loadTreasureHunt();
-                        } else {
-                            console.log("Utilisateur non authentifié, tentative de connexion anonyme ou avec jeton.");
-                            if (initialAuthToken) {
-                                await signInWithCustomToken(auth, initialAuthToken);
-                            } else {
-                                await signInAnonymously(auth);
-                            }
-                        }
-                    });
-                } else {
-                    console.error("Configuration Firebase manquante. Chargement des indices par défaut.");
-                    startScreen.classList.remove('hidden');
-                }
-            } catch (error) {
-                console.error("Erreur d'initialisation de Firebase:", error);
-                showMessage("Erreur de connexion aux services de l'application.", true);
-                startScreen.classList.remove('hidden');
-            }
-        }
-        // Chargement des données de la chasse au trésor depuis Firestore
-        async function loadTreasureHunt() {
-            try {
-                const docRef = doc(db, `artifacts/${appId}/public/data/treasureHunt`, TREASURE_HUNT_DOC_ID);
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists()) {
-                    clues = docSnap.data().clues;
-                    startScreen.classList.remove('hidden');
-                } else {
-                    await setDoc(docRef, { clues: clues });
-                    startScreen.classList.remove('hidden');
-                }
-            } catch (error) {
-                console.error("Erreur de chargement de la chasse au trésor:", error);
-                showMessage("Erreur de connexion aux services de l'application.", true);
-            }
-        }
+        
         function showMessage(text, isError = false) {
             messageArea.textContent = text;
             messageArea.classList.remove('hidden', 'success', 'error');
@@ -443,7 +396,8 @@
                 const base64Audio = audioPart?.inlineData?.data;
                 const mimeType = audioPart?.inlineData?.mimeType;
                 if (base64Audio && mimeType) {
-                    const sampleRate = parseInt(mimeType.match(/rate=(\d+)/)[1], 10);
+                    const sampleRateMatch = mimeType.match(/rate=(\d+)/);
+                    const sampleRate = sampleRateMatch ? parseInt(sampleRateMatch[1], 10) : 16000;
                     const pcmData = base64ToArrayBuffer(base64Audio);
                     const wavBlob = pcmToWav(pcmData, sampleRate);
                     const audioUrl = URL.createObjectURL(wavBlob);
@@ -454,7 +408,7 @@
                 }
             } catch (error) {
                 console.error("Erreur de l'assistant vocal:", error);
-                showMessage("L'assistant vocal n'a pas pu parler. Réessayez !", true);
+                showMessage("L'assistant vocal n'a pas pu parler. Vérifiez votre connexion et vos autorisations. Réessayez !", true);
             } finally {
                 helpBtn.disabled = false;
                 voiceHelpBtn.disabled = false;
@@ -501,7 +455,7 @@
                 }
             } catch (error) {
                 console.error("Erreur de l'assistant visuel:", error);
-                showMessage("L'assistant visuel n'a pas pu analyser l'image. Réessayez !", true);
+                showMessage("L'assistant visuel n'a pas pu analyser l'image. Vérifiez votre connexion. Réessayez !", true);
             } finally {
                 cameraBtn.disabled = false;
                 helpLoading.classList.add('hidden');
@@ -510,7 +464,7 @@
         // Reconnaissance vocale
         function startVoiceRecognition() {
             if (!('webkitSpeechRecognition' in window)) {
-                showMessage("La reconnaissance vocale n'est pas supportée par ce navigateur.", true);
+                showMessage("La reconnaissance vocale n'est pas supportée par ce navigateur. Utilisez Chrome ou Firefox.", true);
                 return;
             }
             const recognition = new webkitSpeechRecognition();
@@ -638,7 +592,14 @@
         });
         imageUpload.addEventListener('change', (event) => {
             const file = event.target.files[0];
-            if (!file) return;
+            if (!file) {
+                 showMessage("Aucun fichier sélectionné.", true);
+                 return;
+            }
+            if (!file.type.startsWith('image/')) {
+                 showMessage("Le fichier sélectionné n'est pas une image.", true);
+                 return;
+            }
             const reader = new FileReader();
             reader.onload = function(e) {
                 const base64String = e.target.result.split(',')[1];
@@ -654,6 +615,55 @@
                 speakerIcon.innerHTML = `<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>`;
             }
         });
+        // Initialisation de Firebase
+        async function initializeFirebase() {
+            try {
+                if (Object.keys(firebaseConfig).length > 0) {
+                    app = initializeApp(firebaseConfig);
+                    db = getFirestore(app);
+                    auth = getAuth(app);
+                    
+                    onAuthStateChanged(auth, async (user) => {
+                        if (user) {
+                            currentUserId = user.uid;
+                            await loadTreasureHunt();
+                        } else {
+                            console.log("Utilisateur non authentifié, tentative de connexion anonyme ou avec jeton.");
+                            if (initialAuthToken) {
+                                await signInWithCustomToken(auth, initialAuthToken);
+                            } else {
+                                await signInAnonymously(auth);
+                            }
+                        }
+                    });
+                } else {
+                    console.error("Configuration Firebase manquante. Chargement des indices par défaut.");
+                    startScreen.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error("Erreur d'initialisation de Firebase:", error);
+                showMessage("Erreur de connexion aux services de l'application.", true);
+                startScreen.classList.remove('hidden');
+            }
+        }
+        // Chargement des données de la chasse au trésor depuis Firestore
+        async function loadTreasureHunt() {
+            try {
+                const docRef = doc(db, `artifacts/${appId}/public/data/treasureHunt`, TREASURE_HUNT_DOC_ID);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    clues = docSnap.data().clues;
+                    startScreen.classList.remove('hidden');
+                } else {
+                    await setDoc(docRef, { clues: clues });
+                    startScreen.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error("Erreur de chargement de la chasse au trésor:", error);
+                showMessage("Erreur de connexion aux services de l'application.", true);
+            }
+        }
+
         initializeFirebase();
     </script>
 </body>
